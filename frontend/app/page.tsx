@@ -11,7 +11,7 @@ export default function HomePage() {
     const checkAuthAndRedirect = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:4000/api/auth/status",
+          `${process.env.NEXT_PUBLIC_API_URL}/api/auth/status`,
           { withCredentials: true }
         );
         

@@ -31,7 +31,7 @@ export default function FormPage() {
   useEffect(() => {
     if (!id) return;
     axios
-      .get(`http://localhost:4000/api/forms/${id}`)
+      .get(`${process.env.NEXT_PUBLIC_API_URL}/api/forms/${id}`)
       .then((res) => setForm(res.data))
       .catch((err) => console.error("Error fetching form:", err));
   }, [id]);
@@ -79,7 +79,7 @@ export default function FormPage() {
         submittedAt: new Date().toISOString()
       };
 
-      const res = await axios.post("http://localhost:4000/api/submissions", submissionData);
+      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/submissions`, submissionData);
 
       alert("✅ Form submitted successfully!");
       console.log("Saved submission:", res.data);

@@ -12,7 +12,7 @@ dotenv.config();
 const app = express();
 
 const corsOptions = {
-  origin: 'http://localhost:3000', // <--- SPECIFIC origin
+  origin: `${process.env.FRONTEND_ORIGIN}`, // <--- SPECIFIC origin
   credentials: true,               // <--- Crucial for 'withCredentials: true' requests
   optionsSuccessStatus: 200        // Some legacy browsers
 };

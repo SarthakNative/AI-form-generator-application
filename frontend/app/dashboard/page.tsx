@@ -49,7 +49,7 @@ export default function Dashboard() {
     const checkAuth = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:4000/api/auth/status",
+          `${process.env.NEXT_PUBLIC_API_URL}/api/auth/status`,
           { withCredentials: true }
         );
 
@@ -70,7 +70,7 @@ export default function Dashboard() {
   const loadUserForms = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:4000/api/forms",
+        `${process.env.NEXT_PUBLIC_API_URL}/api/forms`,
         { withCredentials: true }
       );
       setForms(response.data.forms || []);
@@ -116,7 +116,7 @@ export default function Dashboard() {
     setIsGenerating(true);
     try {
       const response = await axios.post(
-        "http://localhost:4000/api/forms/generate",
+        `${process.env.NEXT_PUBLIC_API_URL}/api/forms/generate`,
         { prompt, title: title || `Form from: ${prompt.substring(0, 30)}...` },
         { withCredentials: true }
       );
@@ -142,7 +142,7 @@ export default function Dashboard() {
     setLogoutError('');
     try {
       await axios.post(
-        "http://localhost:4000/api/auth/logout",
+        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout`,
         {},
         { withCredentials: true }
       );

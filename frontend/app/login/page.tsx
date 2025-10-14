@@ -16,7 +16,7 @@ export default function LoginPage() {
     const checkAuth = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:4000/api/auth/status",
+          `${process.env.NEXT_PUBLIC_API_URL}/api/auth/status`,
           { withCredentials: true }
         );
         
@@ -39,7 +39,7 @@ export default function LoginPage() {
     
     try {
       await axios.post(
-        "http://localhost:4000/api/auth/login", 
+        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, 
         { email, password },
         { withCredentials: true }
       );
