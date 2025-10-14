@@ -1,61 +1,248 @@
+// app/form/[id]/page.tsx (updated)
 "use client";
 
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams } from "next/navigation";
+import { cloudinaryService } from "@/app/services/cloudinaryService";
+
+interface FormField {
+  name: string;
+  label: string;
+  type: string;
+  required: boolean;
+  options?: string[];
+  accept?: string;
+  multiple?: boolean;
+  placeholder:string
+}
+
+type FormData = {
+  [key: string]: string | number | boolean | string[] | File[] | null;
+};
 
 export default function FormPage() {
-  const { id } = useParams(); // ✅ Works in client components
+  const { id } = useParams();
   const [form, setForm] = useState<any>(null);
-  const [data, setData] = useState<any>({});
+  const [data, setData] = useState<FormData>({});
+  const [uploadedFiles, setUploadedFiles] = useState<{[key: string]: string[]}>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!id) return; // ✅ Wait until id is ready
+    if (!id) return;
     axios
       .get(`http://localhost:4000/api/forms/${id}`)
       .then((res) => setForm(res.data))
       .catch((err) => console.error("Error fetching form:", err));
   }, [id]);
 
-  if (!form) return <div>Loading...</div>;
+  const handleFileUpload = async (fieldName: string, files: FileList | null) => {
+    if (!files || files.length === 0) return;
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    try {
+      const fileArray = Array.from(files);
+      const uploadResults = await cloudinaryService.uploadMultipleFiles(fileArray);
+      const fileUrls = uploadResults.map(result => result.url);
+      
+      setUploadedFiles(prev => ({
+        ...prev,
+        [fieldName]: fileUrls
+      }));
 
-  try {
-    const res = await axios.post("http://localhost:4000/api/submissions", {
-      formId: id,   // The current form’s ID (e.g., from route params)
-      data,             // Your form’s user-entered data
-    //  uploadedFiles,    // Optional: if you support file uploads
-    });
+      setData(prev => ({
+        ...prev,
+        [fieldName]: fileUrls
+      }));
 
-    alert("✅ Submission saved successfully!");
-    console.log("Saved submission:", res.data);
-  } catch (error) {
-    console.error("❌ Error saving submission:", error);
-    alert("Error submitting form. Check console for details.");
-  }
-};
+    } catch (error) {
+      console.error(`Error uploading files for ${fieldName}:`, error);
+      alert(`Failed to upload files for ${fieldName}`);
+    }
+  };
 
-  return (
-    <div className="min-h-screen p-10 bg-gray-50">
-      <h1 className="text-2xl font-bold mb-4">{form.title}</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3 max-w-md">
-        {form.schema.fields.map((f: any) => (
-          <div key={f.name}>
-            <label className="block text-sm font-semibold">{f.label}</label>
+  const handleInputChange = (fieldName: string, value: string | number | boolean) => {
+    setData(prev => ({
+      ...prev,
+      [fieldName]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const submissionData = {
+        formId: id,
+        data: data,
+        uploadedFiles: uploadedFiles,
+        submittedAt: new Date().toISOString()
+      };
+
+      const res = await axios.post("http://localhost:4000/api/submissions", submissionData);
+
+      alert("✅ Form submitted successfully!");
+      console.log("Saved submission:", res.data);
+      
+      // Reset form
+      setData({});
+      setUploadedFiles({});
+    } catch (error) {
+      console.error("❌ Error submitting form:", error);
+      alert("Error submitting form. Check console for details.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const renderField = (field: FormField) => {
+    switch (field.type) {
+      case "file":
+        return (
+          <div key={field.name} className="mb-4">
+            <label className="block text-sm font-semibold mb-2">
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </label>
             <input
-              type={f.type}
-              required={f.required}
+              type="file"
+              multiple={field.multiple || false}
+              accept={field.accept}
+              required={field.required}
               className="border p-2 w-full"
-              onChange={(e) => setData({ ...data, [f.name]: e.target.value })}
+              onChange={(e) => handleFileUpload(field.name, e.target.files)}
+            />
+            {uploadedFiles[field.name] && (
+              <div className="mt-2">
+                <p className="text-sm text-green-600">
+                  ✅ {uploadedFiles[field.name].length} file(s) uploaded successfully
+                </p>
+                {uploadedFiles[field.name].map((url, index) => (
+                  <div key={index} className="text-xs text-gray-600 truncate">
+                    {url.split('/').pop()}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+
+      case "textarea":
+        return (
+          <div key={field.name} className="mb-4">
+            <label className="block text-sm font-semibold mb-2">
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            <textarea
+              required={field.required}
+              className="border p-2 w-full rounded min-h-[100px]"
+              placeholder={field.placeholder}
+              onChange={(e) => handleInputChange(field.name, e.target.value)}
             />
           </div>
-        ))}
-        <button type="submit" className="bg-green-600 text-white py-2">
-          Submit
-        </button>
-      </form>
+        );
+
+      case "select":
+        return (
+          <div key={field.name} className="mb-4">
+            <label className="block text-sm font-semibold mb-2">
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            <select
+              required={field.required}
+              className="border p-2 w-full rounded"
+              onChange={(e) => handleInputChange(field.name, e.target.value)}
+            >
+              <option value="">Select an option</option>
+              {field.options?.map(option => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </div>
+        );
+
+      case "checkbox":
+        return (
+          <div key={field.name} className="mb-4">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                className="mr-2"
+                onChange={(e) => handleInputChange(field.name, e.target.checked)}
+              />
+              <span className="text-sm font-semibold">
+                {field.label}
+                {field.required && <span className="text-red-500 ml-1">*</span>}
+              </span>
+            </label>
+          </div>
+        );
+
+      case "radio":
+        return (
+          <div key={field.name} className="mb-4">
+            <label className="block text-sm font-semibold mb-2">
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            {field.options?.map(option => (
+              <label key={option} className="flex items-center mr-4">
+                <input
+                  type="radio"
+                  name={field.name}
+                  value={option}
+                  className="mr-2"
+                  onChange={(e) => handleInputChange(field.name, e.target.value)}
+                />
+                {option}
+              </label>
+            ))}
+          </div>
+        );
+
+      default:
+        return (
+          <div key={field.name} className="mb-4">
+            <label className="block text-sm font-semibold mb-2">
+              {field.label}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            <input
+              type={field.type}
+              required={field.required}
+              className="border p-2 w-full rounded"
+              placeholder={field.placeholder}
+              onChange={(e) => handleInputChange(field.name, e.target.value)}
+            />
+          </div>
+        );
+    }
+  };
+
+  if (!form) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+
+  return (
+    <div className="min-h-screen p-4 md:p-10 bg-gray-50">
+      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6 md:p-8">
+        <h1 className="text-2xl font-bold mb-2">{form.title}</h1>
+        {form.schema.description && (
+          <p className="text-gray-600 mb-6">{form.schema.description}</p>
+        )}
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {form.schema.fields.map((field: FormField) => renderField(field))}
+          
+          <button 
+            type="submit" 
+            disabled={isSubmitting}
+            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-3 px-6 rounded font-semibold w-full transition-colors"
+          >
+            {isSubmitting ? 'Submitting...' : 'Submit Form'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

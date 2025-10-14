@@ -1,14 +1,12 @@
+// app/services/geminiService.ts (updated)
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import * as dotenv from 'dotenv';
 dotenv.config();
 
 const apiKey = process.env.GEMINI_API_KEY;
 
-// 2. Add a check to see if it was loaded correctly. This is a best practice!
 if (!apiKey) {
   console.error("ERROR: GEMINI_API_KEY environment variable not found.");
-  console.error("Please check your .env file and ensure dotenv is configured correctly at the start of your application.");
-  // Throw an error to stop the application from starting without a key
   throw new Error("GEMINI_API_KEY is not set.");
 }
 
@@ -21,6 +19,8 @@ export interface FormField {
   required: boolean;
   options?: string[]; // For select, radio fields
   placeholder?: string;
+  accept?: string; // For file fields - e.g., "image/*", ".pdf,.doc"
+  multiple?: boolean; // For file fields - allow multiple files
 }
 
 export interface FormSchema {
@@ -59,7 +59,9 @@ JSON Structure:
       "label": "Field Label",
       "type": "text|email|number|textarea|select|checkbox|radio|file|date",
       "required": true/false,
-      "options": ["option1", "option2"] // only for select/radio types
+      "options": ["option1", "option2"], // only for select/radio types
+      "accept": "image/*,.pdf", // for file fields - accepted file types
+      "multiple": true/false // for file fields - allow multiple files
     }
   ]
 }
@@ -72,40 +74,36 @@ Field Types:
 - "select": Dropdown selection
 - "checkbox": Multiple selection
 - "radio": Single selection
-- "file": File upload
+- "file": File upload - use when user mentions uploads, documents, images, files
 - "date": Date picker
+
+File Upload Guidelines:
+- When user mentions "photo", "image", "picture" → set type: "file", accept: "image/*"
+- When user mentions "document", "PDF", "file" → set type: "file", accept: ".pdf,.doc,.docx"
+- When user mentions "multiple files" or "multiple images" → set multiple: true
+- For resume uploads → set accept: ".pdf,.doc,.docx,.txt"
+- For profile pictures → set accept: "image/*", multiple: false
 
 Examples:
 
-User: "I need a contact form with name, email, message"
+User: "I need a job application form with name, email, resume upload, and cover letter"
 Output: {
-  "title": "Contact Form",
-  "description": "Get in touch with us",
+  "title": "Job Application Form",
   "fields": [
     { "name": "name", "label": "Full Name", "type": "text", "required": true },
     { "name": "email", "label": "Email Address", "type": "email", "required": true },
-    { "name": "message", "label": "Your Message", "type": "textarea", "required": true }
+    { "name": "resume", "label": "Upload Resume", "type": "file", "required": true, "accept": ".pdf,.doc,.docx,.txt", "multiple": false },
+    { "name": "coverLetter", "label": "Cover Letter", "type": "textarea", "required": false }
   ]
 }
 
-User: "Create a survey with age, favorite color (dropdown), and newsletter subscription"
+User: "Create a property listing form with address, price, and multiple photos"
 Output: {
-  "title": "User Survey",
+  "title": "Property Listing Form",
   "fields": [
-    { "name": "age", "label": "Your Age", "type": "number", "required": false },
-    { 
-      "name": "favoriteColor", 
-      "label": "Favorite Color", 
-      "type": "select", 
-      "required": false,
-      "options": ["Red", "Blue", "Green", "Yellow", "Other"]
-    },
-    { 
-      "name": "newsletter", 
-      "label": "Subscribe to Newsletter", 
-      "type": "checkbox", 
-      "required": false 
-    }
+    { "name": "address", "label": "Property Address", "type": "text", "required": true },
+    { "name": "price", "label": "Price", "type": "number", "required": true },
+    { "name": "photos", "label": "Property Photos", "type": "file", "required": true, "accept": "image/*", "multiple": true }
   ]
 }
 
@@ -116,12 +114,9 @@ Now generate schema for: "${prompt}"`;
       const response = await result.response;
       const text = response.text();
       
-      // Clean the response - remove markdown code blocks if present
       const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
-      
       const schema: FormSchema = JSON.parse(cleanText);
       
-      // Use provided title if available
       if (title) {
         schema.title = title;
       }
