@@ -79,12 +79,14 @@ export const logout = (req: Request, res: Response) => {
  * Checks the authentication status using the token verified by the 'protect' middleware.
  * This is the API used by the client's app/page.tsx to check if the user is logged in.
  */
-export const checkAuthStatus = (req: AuthenticatedRequest, res: Response) => {
+export const checkAuthStatus = async (req: AuthenticatedRequest, res: Response) => {
     // If this function executes, it means the 'protect' middleware successfully
     // verified the cookie and the user is authenticated.
+     const user = await User.findById(req.userId);
     res.json({ 
         message: "Authenticated", 
         // We can optionally return the userId attached by the middleware
-        userId: req.userId 
+        userId: req.userId,
+        username: user?.name
     });
 };

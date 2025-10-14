@@ -39,7 +39,7 @@ export default function Dashboard() {
   const [showFormModal, setShowFormModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
-  
+
   // Form generation state
   const [prompt, setPrompt] = useState("");
   const [title, setTitle] = useState("");
@@ -52,10 +52,10 @@ export default function Dashboard() {
           "http://localhost:4000/api/auth/status",
           { withCredentials: true }
         );
-        
+
         if (response.data.message === "Authenticated") {
           setIsLoading(false);
-          setUserName(response.data.user?.name || response.data.user?.email || "User");
+          setUserName(response.data?.username);
           loadUserForms();
         }
       } catch (err) {
@@ -79,42 +79,71 @@ export default function Dashboard() {
     }
   };
 
- // In your handleGenerateForm function, update the error handling:
-const handleGenerateForm = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!prompt.trim()) return;
+  // Helper function to check if a string is a valid URL
+  const isValidUrl = (string: String) => {
+    if (typeof string !== 'string') return false;
 
-  setIsGenerating(true);
-  try {
-    const response = await axios.post(
-      "http://localhost:4000/api/forms/generate",
-      { prompt, title: title || `Form from: ${prompt.substring(0, 30)}...` },
-      { withCredentials: true }
-    );
-    
-    setForms(prev => [response.data, ...prev]);
-    setShowFormModal(false);
-    setPrompt("");
-    setTitle("");
-    
-    // Show success message
-    alert("Form generated successfully!");
-  } catch (err: any) {
-    console.error("Form generation failed:", err);
-    const errorMessage = err.response?.data?.message || "Failed to generate form. Please try again.";
-    alert(errorMessage);
-  } finally {
-    setIsGenerating(false);
-  }
-};
+    try {
+      // Check for common URL patterns
+      const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+      const hasValidStructure = urlPattern.test(string);
+
+      // Additional check for URLs without protocol
+      const withProtocol = string.startsWith('http://') || string.startsWith('https://')
+        ? string
+        : `https://${string}`;
+
+      new URL(withProtocol);
+      return hasValidStructure;
+    } catch (_) {
+      return false;
+    }
+  };
+
+  // Helper function to ensure URL has http/https prefix
+  const ensureHttpPrefix = (url: any) => {
+    if (typeof url !== 'string') return url;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `https://${url}`;
+  };
+  // In your handleGenerateForm function, update the error handling:
+  const handleGenerateForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!prompt.trim()) return;
+
+    setIsGenerating(true);
+    try {
+      const response = await axios.post(
+        "http://localhost:4000/api/forms/generate",
+        { prompt, title: title || `Form from: ${prompt.substring(0, 30)}...` },
+        { withCredentials: true }
+      );
+
+      setForms(prev => [response.data, ...prev]);
+      setShowFormModal(false);
+      setPrompt("");
+      setTitle("");
+
+      // Show success message
+      alert("Form generated successfully!");
+    } catch (err: any) {
+      console.error("Form generation failed:", err);
+      const errorMessage = err.response?.data?.message || "Failed to generate form. Please try again.";
+      alert(errorMessage);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
     setLogoutError('');
     try {
       await axios.post(
-        "http://localhost:4000/api/auth/logout", 
-        {}, 
+        "http://localhost:4000/api/auth/logout",
+        {},
         { withCredentials: true }
       );
       router.push("/login");
@@ -160,14 +189,14 @@ const handleGenerateForm = async (e: React.FormEvent) => {
           <p className="text-gray-600 mt-1">Manage your forms and view submissions</p>
         </div>
         <div className="flex gap-4 items-center">
-          <button 
+          <button
             onClick={() => setShowFormModal(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg transition duration-200 shadow-md"
           >
             + Create Form
           </button>
-          <button 
-            onClick={handleLogout} 
+          <button
+            onClick={handleLogout}
             disabled={isLoggingOut}
             className="bg-red-500 hover:bg-red-600 text-white font-medium px-4 py-2 rounded-lg transition duration-200 disabled:opacity-50 shadow-md"
           >
@@ -189,7 +218,7 @@ const handleGenerateForm = async (e: React.FormEvent) => {
             <div className="text-gray-400 text-6xl mb-4">📝</div>
             <h3 className="text-xl font-semibold text-gray-700 mb-2">No forms yet</h3>
             <p className="text-gray-500 mb-4">Create your first AI-generated form to get started</p>
-            <button 
+            <button
               onClick={() => setShowFormModal(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg transition duration-200"
             >
@@ -216,13 +245,13 @@ const handleGenerateForm = async (e: React.FormEvent) => {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     onClick={() => copyFormLink(form._id)}
                     className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium px-3 py-2 rounded transition duration-200"
                   >
                     Copy Link
                   </button>
-                  <button 
+                  <button
                     onClick={() => viewSubmissions(form)}
                     className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-2 rounded transition duration-200"
                   >
@@ -291,7 +320,6 @@ const handleGenerateForm = async (e: React.FormEvent) => {
         </div>
       )}
 
-      {/* Submissions Modal */}
       {selectedForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[80vh] overflow-hidden">
@@ -327,15 +355,63 @@ const handleGenerateForm = async (e: React.FormEvent) => {
                           Submission {index + 1} • {new Date(submission.submittedAt).toLocaleDateString()}
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {Object.entries(submission.data).map(([key, value]) => (
-                            <div key={key} className="text-sm">
-                              <span className="font-medium text-gray-600 capitalize">
-                                {key}:
-                              </span>
-                              <span className="ml-2 text-gray-800">
-                                {typeof value === 'string' ? value : JSON.stringify(value)}
-                              </span>
+                          {Object.entries(submission.data || {}).map(([key, value]) => (
+                            <div key={key} className="group bg-gradient-to-r from-white to-gray-50 rounded-xl border border-gray-100 p-4 hover:border-blue-200 hover:shadow-md transition-all duration-300">
+                              <div className="space-y-2">
+                                {/* Key with decorative element */}
+                                <div className="flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                    {key}
+                                  </span>
+                                </div>
+
+                                <div className="pl-3.5">
+                                  {Array.isArray(value) ? (
+                                    <div className="space-y-2">
+                                      {value.map((item, index) => (
+                                        <div key={index}>
+                                          {isValidUrl(item) ? (
+                                            <a
+                                              href={ensureHttpPrefix(item)}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium underline decoration-2 decoration-blue-200 hover:decoration-blue-400 transition-all duration-200 break-words group-hover:translate-x-0.5"
+                                            >
+                                              <span>Open file</span>
+                                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                              </svg>
+                                            </a>
+                                          ) : (
+                                            <div className="text-gray-800 leading-relaxed break-words">
+                                              {typeof item === 'string' ? item : JSON.stringify(item)}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : isValidUrl(value) ? (
+                                    <a
+                                      href={ensureHttpPrefix(value)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium underline decoration-2 decoration-blue-200 hover:decoration-blue-400 transition-all duration-200 break-words group-hover:translate-x-0.5"
+                                    >
+                                      <span>{value}</span>
+                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                      </svg>
+                                    </a>
+                                  ) : (
+                                    <div className="text-gray-800 leading-relaxed break-words">
+                                      {typeof value === 'string' ? value : JSON.stringify(value)}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
+
                           ))}
                         </div>
                       </div>
