@@ -10,15 +10,27 @@ import submissionRoutes from "./routes/submissionRoutes";
 dotenv.config();
 
 const app = express();
+app.use(cookieParser());
 
 const corsOptions = {
-  origin: `${process.env.FRONTEND_ORIGIN}`, // <--- SPECIFIC origin
-  credentials: true,               // <--- Crucial for 'withCredentials: true' requests
-  optionsSuccessStatus: 200        // Some legacy browsers
+  origin: process.env.FRONTEND_ORIGIN,
+  credentials: true,
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With',
+    'Accept'
+  ],
+  exposedHeaders: ['Set-Cookie']
 };
 
 app.use(cors(corsOptions));
-app.use(cookieParser());
+
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);

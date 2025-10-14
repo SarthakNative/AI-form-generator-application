@@ -16,8 +16,9 @@ const setAuthCookie = (res: Response, token: string) => {
     res.cookie('auth_token', token, {
         httpOnly: true, // Crucial: Prevents client-side JS access (XSS defense)
         secure: isProduction, // Send cookie only over HTTPS in production
-        sameSite: 'lax', // Helps mitigate CSRF attacks
+        sameSite: 'none', // Helps mitigate CSRF attacks
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+        path: '/', 
     });
 };
 
@@ -50,6 +51,7 @@ export const login = async (req: Request, res: Response) => {
 
     const valid = await verifyPassword(password, user.passwordHash);
     if (!valid) return res.status(400).json({ message: "Invalid credentials" });
+    console.log("Incoming cookies:", req.headers.cookie);
 
     const token = createToken(user.id);
     
@@ -70,7 +72,8 @@ export const logout = (req: Request, res: Response) => {
   res.clearCookie('auth_token', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'none',
+    path: '/', 
   });
   
   res.json({ message: "Logout successful" });

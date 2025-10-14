@@ -1,6 +1,10 @@
 import express from "express";
 import { register, login, logout, checkAuthStatus } from "../controllers/authController";
 import { protect } from "../middlewares/authMiddleware";
+import cookieParser from "cookie-parser";
+const app = express();
+app.use(cookieParser());
+
 
 const router = express.Router();
 router.post("/register", register);
