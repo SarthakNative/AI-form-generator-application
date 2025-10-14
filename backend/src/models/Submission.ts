@@ -1,3 +1,5 @@
+import { Schema, model } from 'mongoose';
+
 const SubmissionSchema = new Schema({
   form: { type: Schema.Types.ObjectId, ref: 'Form', required: true },
   data: { type: Object, required: true },     // answers mapped to schema keys

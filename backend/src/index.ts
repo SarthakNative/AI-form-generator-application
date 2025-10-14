@@ -1,22 +1,36 @@
-import express from 'express';
-import mongoose from 'mongoose';
-import cors from 'cors';
-import dotenv from 'dotenv';
+import express from "express";
+import mongoose from "mongoose";
+import cors from "cors";
+import * as dotenv from "dotenv";
+import cookieParser from 'cookie-parser';
+import authRoutes from "./routes/authRoutes";
+import formRoutes from "./routes/formRoutes";
+import submissionRoutes from "./routes/submissionRoutes";
 
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+const corsOptions = {
+  origin: 'http://localhost:3000', // <--- SPECIFIC origin
+  credentials: true,               // <--- Crucial for 'withCredentials: true' requests
+  optionsSuccessStatus: 200        // Some legacy browsers
+};
+
+app.use(cors(corsOptions));
+app.use(cookieParser());
 app.use(express.json());
 
-// sample test route
-app.get('/', (_, res) => res.send('TurbotechAssist API running...'));
+app.use("/api/auth", authRoutes);
+app.use("/api/forms", formRoutes);
+app.use("/api/submissions",submissionRoutes);
 
-// MongoDB connection
-const PORT = process.env.PORT || 4000;
-mongoose.connect(process.env.MONGODB_URI || '')
-  .then(() => {
-    console.log('✅ MongoDB connected');
-    app.listen(PORT, () => console.log(`��� Server running on port ${PORT}`));
-  })
-  .catch(err => console.error('❌ DB connection error:', err));
+app.get("/", (_, res) => res.send("TurbotechAssist API running ✅"));
+
+mongoose.connect(process.env.MONGODB_URI || "")
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch(err => console.error("❌ DB error:", err));
+
+app.listen(process.env.PORT || 4000, () =>
+  console.log(`🚀 Server running on port ${process.env.PORT || 4000}`)
+);
