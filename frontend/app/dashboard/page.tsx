@@ -80,7 +80,7 @@ export default function Dashboard() {
   };
 
   // Helper function to check if a string is a valid URL
-  const isValidUrl = (string: String) => {
+  const isValidUrl = (string: string) => {
     if (typeof string !== 'string') return false;
 
     try {
