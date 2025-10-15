@@ -21,9 +21,24 @@ type FormData = {
   [key: string]: string | number | boolean | string[] | File[] | null;
 };
 
+interface Submission {
+  _id?: string;           // frontend will just treat ObjectId as string
+  data: Record<string, any>;
+  submittedAt: string;    // you can use string for JSON dates
+}
+
+interface Form {
+  _id?: string;
+  title: string;
+  description?: string;
+  owner: string;
+  schema: Record<string, any>;  // frontend doesn't need to know the exact Mongoose type
+  submissions: Submission[];
+}
+
 export default function FormPage() {
-  const { id } = useParams();
-  const [form, setForm] = useState<any>(null);
+  const { id } = useParams(); 
+  const [form, setForm] = useState<Form | null>(null);
   const [data, setData] = useState<FormData>({});
   const [uploadedFiles, setUploadedFiles] = useState<{[key: string]: string[]}>({});
   const [isSubmitting, setIsSubmitting] = useState(false);

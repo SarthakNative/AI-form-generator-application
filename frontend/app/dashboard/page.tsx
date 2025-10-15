@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 
 interface FormField {
@@ -101,7 +101,7 @@ export default function Dashboard() {
   };
 
   // Helper function to ensure URL has http/https prefix
-  const ensureHttpPrefix = (url: any) => {
+  const ensureHttpPrefix = (url: string) => {
     if (typeof url !== 'string') return url;
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
@@ -128,9 +128,17 @@ export default function Dashboard() {
 
       // Show success message
       alert("Form generated successfully!");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Form generation failed:", err);
-      const errorMessage = err.response?.data?.message || "Failed to generate form. Please try again.";
+
+      let errorMessage = "Failed to generate form. Please try again.";
+
+      if (err instanceof AxiosError) {
+        errorMessage = err.response?.data?.message || errorMessage;
+      } else if (err instanceof Error) {
+        errorMessage = err.message || errorMessage;
+      }
+
       alert(errorMessage);
     } finally {
       setIsGenerating(false);
@@ -147,8 +155,13 @@ export default function Dashboard() {
         { withCredentials: true }
       );
       router.push("/login");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Logout failed:", err);
+
+      if (err instanceof Error) {
+        console.error("Error details:", err.message);
+      }
+
       setLogoutError("Logout failed. Please try again.");
     } finally {
       setIsLoggingOut(false);

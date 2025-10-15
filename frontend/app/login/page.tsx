@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -33,25 +33,54 @@ export default function LoginPage() {
   }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
-    
-    try {
-      await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, 
-        { email, password },
-        { withCredentials: true }
-      );
+  e.preventDefault();
+  setError("");
+  setIsLoading(true);
+  
+  try {
+    // 1. First, make the login request
+    await axios.post(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, 
+      { email, password },
+      { withCredentials: true }
+    );
+
+    console.log("Login successful, verifying auth status...");
+
+    // 2. Wait a brief moment for the cookie to be set
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // 3. Verify that the user is actually authenticated
+    const statusResponse = await axios.get(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/auth/status`,
+      { withCredentials: true }
+    );
+
+    console.log("Auth status after login:", statusResponse.data);
+
+    // 4. Only redirect if properly authenticated
+    if (statusResponse.data.message === "Authenticated") {
       router.push("/dashboard");
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Login failed due to network or server error.";
-      setError(errorMessage);
-      console.error("Login error:", err);
-    } finally {
-      setIsLoading(false);
+    } else {
+      setError("Authentication failed after login");
     }
-  };
+
+  } catch (err: unknown) {
+    console.error("Login error:", err);
+
+    let errorMessage = "Login failed due to network or server error.";
+
+    if (err instanceof AxiosError) {
+      errorMessage = err.response?.data?.message || errorMessage;
+    } else if (err instanceof Error) {
+      errorMessage = err.message || errorMessage;
+    }
+
+    setError(errorMessage);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">

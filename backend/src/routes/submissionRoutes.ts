@@ -28,10 +28,16 @@ router.post("/", async (req, res) => {
       message: "Submission saved successfully",
       submission,
     });
-  } catch (err: any) {
-    console.error("Error saving submission:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
+  }catch (err: unknown) {
+  console.error("Error saving submission:", err);
+
+  const message =
+    err instanceof Error
+      ? err.message
+      : "An unexpected error occurred";
+
+  res.status(500).json({ message: "Server error", error: message });
+}
 });
 
 export default router;

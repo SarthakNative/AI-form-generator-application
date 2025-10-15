@@ -3,10 +3,14 @@ import { Request, Response } from "express";
 import Form from "../models/Form";
 import { geminiFormService } from "../services/geminiService";
 
-export const generateForm = async (req: Request, res: Response) => {
+interface AuthenticatedRequest extends Request {
+  userId?: string;
+}
+
+export const generateForm = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { prompt, title } = req.body;
-    const userId = (req as any).userId;
+    const userId = req.userId;
 
     if (!prompt) {
       return res.status(400).json({ message: "Prompt is required" });
@@ -24,10 +28,11 @@ export const generateForm = async (req: Request, res: Response) => {
     });
 
     res.json(form);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    
     console.error("Form generation error:", error);
     
-    if (error.message.includes("Failed to generate form schema")) {
+    if (error instanceof Error && error.message.includes("Failed to generate form schema")) {
       return res.status(500).json({ 
         message: "AI service unavailable. Please try again later." 
       });
@@ -48,9 +53,9 @@ export const getForm = async (req: Request, res: Response) => {
   }
 };
 
-export const getUserForms = async (req: Request, res: Response) => {
+export const getUserForms = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = (req as any).userId;
+    const userId = req.userId;
     const forms = await Form.find({ owner: userId })
       .select("title schema submissions createdAt")
       .sort({ createdAt: -1 });

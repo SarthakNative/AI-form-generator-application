@@ -16,7 +16,7 @@ const setAuthCookie = (res: Response, token: string) => {
     res.cookie('auth_token', token, {
         httpOnly: true, // Crucial: Prevents client-side JS access (XSS defense)
         secure: isProduction, // Send cookie only over HTTPS in production
-        sameSite: 'none', // Helps mitigate CSRF attacks
+        sameSite : isProduction ? 'none' : 'lax', // Helps mitigate CSRF attacks
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
         path: '/', 
     });
@@ -58,6 +58,10 @@ export const login = async (req: Request, res: Response) => {
     // Set the token as an HTTP-only cookie
     setAuthCookie(res, token);
 
+    console.log("Cookie set in response headers:", {
+      'Set-Cookie': res.getHeader('Set-Cookie')
+    });
+    
     res.json({ 
       message: "Login successful",
       userId: user.id 
@@ -72,7 +76,7 @@ export const logout = (req: Request, res: Response) => {
   res.clearCookie('auth_token', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'none',
+    sameSite : process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     path: '/', 
   });
   
