@@ -43,8 +43,14 @@ app.use("/api/submissions", submissionRoutes);
 app.get("/", (_, res) => res.send("TurbotechAssist API running ✅"));
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || "")
-  .then(() => console.log("✅ MongoDB connected"))
+const connectionOptions = {
+  ssl: process.env.NODE_ENV === 'production', // Enable SSL only in production
+  sslValidate: process.env.NODE_ENV === 'production',
+  // Other options...
+};
+
+mongoose.connect(process.env.MONGODB_URI || "", connectionOptions)
+  .then(() => console.log("✅ MongoDB connected" + (process.env.NODE_ENV === 'production' ? ' with SSL' : '')))
   .catch(err => console.error("❌ DB error:", err));
 
 // Start the server
