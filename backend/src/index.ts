@@ -28,7 +28,7 @@ const corsOptions = {
   exposedHeaders: ['Set-Cookie']
 };
 
-// Apply CORS globally (this also handles OPTIONS preflight requests)
+// Apply CORS globally
 app.use(cors(corsOptions));
 
 // Middleware to parse JSON bodies
@@ -42,15 +42,9 @@ app.use("/api/submissions", submissionRoutes);
 // Health check route
 app.get("/", (_, res) => res.send("TurbotechAssist API running ✅"));
 
-// Connect to MongoDB
-const connectionOptions = {
-  ssl: process.env.NODE_ENV === 'production', // Enable SSL only in production
-  sslValidate: process.env.NODE_ENV === 'production',
-  // Other options...
-};
-
-mongoose.connect(process.env.MONGODB_URI || "", connectionOptions)
-  .then(() => console.log("✅ MongoDB connected" + (process.env.NODE_ENV === 'production' ? ' with SSL' : '')))
+// ✅ FIXED: Connect to MongoDB without deprecated options
+mongoose.connect(process.env.MONGODB_URI || "")
+  .then(() => console.log("✅ MongoDB connected successfully"))
   .catch(err => console.error("❌ DB error:", err));
 
 // Start the server
